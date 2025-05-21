@@ -1,0 +1,8 @@
+{
+    "model_type": "transformer",
+    "d_embed": 512,
+    "d_hidden": 512,
+    "max_seq_len": 128,
+    "n_heads": 8,
+    "n_transformer_blocks": 1
+}
