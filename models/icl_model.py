@@ -53,5 +53,7 @@ class ICLModel(nn.Module):
         if targets is None:
             return logits, None
     
+        targets[:, 0] = ignore_index # Prevent prediction of the first token
+        
         loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.contiguous().view(-1), ignore_index=ignore_index)
         return logits, loss
