@@ -35,7 +35,7 @@ class ICLAttentionExact(nn.Module):
         q = self.rotary_embeddings(q) # (B, H, S, E)
         k = self.rotary_embeddings(k) # (B, H, S, E)
 
-        causal_mask = torch.triu(torch.ones(S, S), diagonal=1).bool().to(q.device) # (S, S)
+        causal_mask = torch.triu(torch.ones(S, S), diagonal=0).bool().to(q.device) # (S, S)
         
         attn_scores = torch.einsum('bhqd,bhkd->bhqk', q, k) # (B, H, S, S)
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, H, S, S)
