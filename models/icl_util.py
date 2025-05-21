@@ -201,11 +201,11 @@ class ICLBlock(nn.Module):
 
         if self.config.icl_mode == 'exact':
             self.attn = ICLAttentionExact(config)
-        elif self.config.icl_mode == 'a':
+        elif self.config.icl_mode == "a":
             self.attn = ICLAttentionA(config)
-        elif self.config.icl_mode == 'b':
+        elif self.config.icl_mode == "b":
             self.attn = ICLAttentionB(config)
-        elif self.config.icl_mode == 'c':
+        elif self.config.icl_mode == "c":
             self.attn = ICLAttentionC(config)
         
     # NOTE: Only works for single layer atm (assumes functional_update is zero)
