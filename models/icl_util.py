@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchtune.modules import RotaryPositionalEmbeddings
 
-
 class ICLAttentionC(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -42,8 +41,15 @@ class ICLAttentionC(nn.Module):
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, H, S, S)
         
         attn_probs = F.softmax(attn_scores, dim=-1) # (B, H, S, S)
-        attn_probs = self.drop_attn(attn_probs) # (B, H, S, S)
         
+        # This mask avoids "cheating" by looking ahead at x_{N+1}
+        diag_mask = torch.ones(S, S, device=attn_probs.device) - torch.eye(S, device=attn_probs.device) # (S, S)
+        diag_mask = diag_mask.unsqueeze(0).unsqueeze(0) # (1, 1, S, S)
+
+        attn_probs = attn_probs * diag_mask # (B, H, S, S)
+        
+        attn_probs = self.drop_attn(attn_probs) # (B, H, S, S)
+
         attn_output = torch.einsum('bhzs,bhzd->bhsd', attn_probs, v) # (B, H, S, E)
         attn_output = attn_output.transpose(1, 2).contiguous().view(B, S, self.config.d_hidden * self.config.n_heads) # (B, S, H * E)
 
@@ -88,6 +94,13 @@ class ICLAttentionB(nn.Module):
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, H, S, S)
         
         attn_probs = F.softmax(attn_scores, dim=-1) # (B, H, S, S)
+        
+        # This mask avoids "cheating" by looking ahead at x_{N+1}
+        diag_mask = torch.ones(S, S, device=attn_probs.device) - torch.eye(S, device=attn_probs.device) # (S, S)
+        diag_mask = diag_mask.unsqueeze(0).unsqueeze(0) # (1, 1, S, S)
+
+        attn_probs = attn_probs * diag_mask # (B, H, S, S)
+        
         attn_probs = self.drop_attn(attn_probs) # (B, H, S, S)
         
         attn_output = torch.einsum('bhzs,bhzd->bhsd', attn_probs, v) # (B, H, S, E)
@@ -133,6 +146,13 @@ class ICLAttentionA(nn.Module):
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, H, S, S)
         
         attn_probs = F.softmax(attn_scores, dim=-1) # (B, H, S, S)
+        
+        # This mask avoids "cheating" by looking ahead at x_{N+1}
+        diag_mask = torch.ones(S, S, device=attn_probs.device) - torch.eye(S, device=attn_probs.device) # (S, S)
+        diag_mask = diag_mask.unsqueeze(0).unsqueeze(0) # (1, 1, S, S)
+
+        attn_probs = attn_probs * diag_mask # (B, H, S, S)
+        
         attn_probs = self.drop_attn(attn_probs) # (B, H, S, S)
         
         attn_output = torch.einsum('bhzs,bhzd->bhsd', attn_probs, v) # (B, H, S, E)
@@ -175,13 +195,19 @@ class ICLAttentionExact(nn.Module):
         q = self.rotary_embeddings(q) # (B, H, S, E)
         k = self.rotary_embeddings(k) # (B, H, S, E)
 
-        causal_mask = torch.triu(torch.ones(S, S), diagonal=0).bool().to(q.device) # (S, S)
-        causal_mask[0, 0] = False # Ignore the first token (Fixes softmax)
+        causal_mask = torch.triu(torch.ones(S, S), diagonal=1).bool().to(q.device) # (S, S)
         
         attn_scores = torch.einsum('bhqd,bhkd->bhqk', q, k) # (B, H, S, S)
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, H, S, S)
         
         attn_probs = F.softmax(attn_scores, dim=-1) # (B, H, S, S)
+        
+        # This mask avoids "cheating" by looking ahead at x_{N+1}
+        diag_mask = torch.ones(S, S, device=attn_probs.device) - torch.eye(S, device=attn_probs.device) # (S, S)
+        diag_mask = diag_mask.unsqueeze(0).unsqueeze(0) # (1, 1, S, S)
+
+        attn_probs = attn_probs * diag_mask # (B, H, S, S)
+        
         attn_probs = self.drop_attn(attn_probs) # (B, H, S, S)
         
         attn_output = torch.einsum('bhzs,bhzd->bhsd', attn_probs, v) # (B, H, S, E)
