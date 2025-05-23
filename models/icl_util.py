@@ -17,6 +17,8 @@ class ICLAttentionC(nn.Module):
 
         self.rotary_embeddings = RotaryPositionalEmbeddings(config.d_embed)
         
+        self.attn_scaling = 1.0 / config.d_hidden
+
         self.drop_attn = nn.Dropout(0.1)
         self.drop_resid = nn.Dropout(0.1)
         
@@ -37,6 +39,8 @@ class ICLAttentionC(nn.Module):
         attn_scores = torch.einsum('bhqd,bhkd->bhqk', q, k) # (B, H, S, S)
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, H, S, S)
         
+        attn_scores = attn_scores * self.attn_scaling
+
         attn_probs = F.softmax(attn_scores, dim=-1) # (B, H, S, S)
         
         # This mask avoids "cheating" by looking ahead at x_{N+1}
