@@ -1,10 +1,9 @@
 {
     "model_type": "icl",
     "d_embed": 512,
-    "d_hidden": 512,
     "max_seq_len": 128,
     "n_heads": 8,
-    "n_icl_blocks": 2,
     "n_transformer_blocks": 0,
-    "icl_mode": "exact"
+    "n_icl_blocks": 1,
+    "icl_type": "alt"
 }

@@ -3,21 +3,21 @@ import math
 import torch.nn as nn
 import torch.nn.functional as F
 from torchtune.modules import RotaryPositionalEmbeddings
-    
+
 class Attention(nn.Module):
     def __init__(self, config):
         super().__init__()
         
         self.config = config
         
-        self.W_q = nn.Parameter(torch.zeros(config.n_heads, config.d_hidden, config.d_hidden), requires_grad=True)
-        self.W_k = nn.Parameter(torch.zeros(config.n_heads, config.d_hidden, config.d_hidden), requires_grad=True)
-        self.W_v = nn.Parameter(torch.zeros(config.n_heads, config.d_hidden, config.d_hidden), requires_grad=True)
-        self.W_o = nn.Parameter(torch.zeros(config.n_heads * config.d_hidden, config.d_hidden), requires_grad=True)
+        self.W_q = nn.Parameter(torch.zeros(config.n_heads, config.d_embed, config.d_embed), requires_grad=True)
+        self.W_k = nn.Parameter(torch.zeros(config.n_heads, config.d_embed, config.d_embed), requires_grad=True)
+        self.W_v = nn.Parameter(torch.zeros(config.n_heads, config.d_embed, config.d_embed), requires_grad=True)
+        self.W_o = nn.Parameter(torch.zeros(config.n_heads * config.d_embed, config.d_embed), requires_grad=True)
 
-        self.attn_scale = 1 / math.sqrt(config.d_hidden)
+        self.attn_scale = 1 / math.sqrt(config.d_embed)
         
-        self.rotary_embeddings = RotaryPositionalEmbeddings(config.d_hidden)
+        self.rotary_embeddings = RotaryPositionalEmbeddings(config.d_embed)
         
         self.drop_attn = nn.Dropout(0.1)
         self.drop_resid = nn.Dropout(0.1)
@@ -48,7 +48,7 @@ class Attention(nn.Module):
         attn_probs = self.drop_attn(attn_probs) # (B, H, S, S)
         
         attn_output = torch.einsum('bhzs,bhzd->bhsd', attn_probs, v) # (B, H, S, D)
-        attn_output = attn_output.transpose(1, 2).contiguous().view(B, S, self.config.d_hidden * self.config.n_heads) # (B, S, H * D)
+        attn_output = attn_output.transpose(1, 2).contiguous().view(B, S, self.config.d_embed * self.config.n_heads) # (B, S, H * D)
         attn_output = torch.einsum('bsz,zd->bsd', attn_output, self.W_o) # (B, S, D)
         attn_output = self.drop_resid(attn_output) # (B, S, D)
         
@@ -59,12 +59,12 @@ class MLP(nn.Module):
         super().__init__()
 
         if d_in is None:
-            d_in = config.d_hidden
+            d_in = config.d_embed
         if d_out is None:
-            d_out = config.d_hidden
+            d_out = config.d_embed
 
-        self.fc_1 = nn.Linear(d_in, 4 * config.d_hidden)
-        self.fc_2 = nn.Linear(4 * config.d_hidden, d_out)
+        self.fc_1 = nn.Linear(d_in, 4 * config.d_embed)
+        self.fc_2 = nn.Linear(4 * config.d_embed, d_out)
         
         self.activation = nn.GELU()    
         self.drop = nn.Dropout(0.1)
@@ -83,10 +83,10 @@ class TransformerBlock(nn.Module):
         self.config = config
         
         self.attention = Attention(config)
-        self.ln_attn = nn.LayerNorm(config.d_hidden)
+        self.ln_attn = nn.LayerNorm(config.d_embed)
         
         self.mlp = MLP(config)
-        self.ln_mlp = nn.LayerNorm(config.d_hidden)
+        self.ln_mlp = nn.LayerNorm(config.d_embed)
         
     def forward(self, x):
         x = x + self.attention(self.ln_attn(x))

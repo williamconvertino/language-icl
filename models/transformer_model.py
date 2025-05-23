@@ -10,7 +10,6 @@ class TransformerModel(nn.Module):
         self.config = config
         
         self.embedding = nn.Embedding(config.vocab_size, config.d_embed)
-        self.use_scratch_space = config.d_embed != config.d_hidden
         
         self.transformer_blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_transformer_blocks)])
         
@@ -28,11 +27,8 @@ class TransformerModel(nn.Module):
         
         x = self.embedding(x) # (B, S, E)
 
-        scratch_space = torch.zeros((B, S, self.config.d_hidden - self.config.d_embed), device=device)
-        x = torch.cat([x, scratch_space], dim=-1) # (B, S, D)
-        
         for transformer_block in self.transformer_blocks:
-            x = transformer_block(x) # (B, S, D)
+            x = transformer_block(x) # (B, S, E)
         
         x = x[:, :, :self.config.d_embed] # (B, S, E)
 
