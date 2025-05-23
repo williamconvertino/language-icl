@@ -5,5 +5,5 @@
     "n_heads": 8,
     "n_transformer_blocks": 0,
     "n_icl_blocks": 1,
-    "icl_type": "alt"
+    "icl_mode": "alt"
 }
