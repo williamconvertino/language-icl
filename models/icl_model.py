@@ -44,14 +44,13 @@ class ICLModel(nn.Module):
         for icl_block in self.icl_blocks:
             icl_covariates, icl_targets, icl_functional_update = icl_block(icl_covariates, icl_targets, icl_functional_update)
 
-        scratch_space = torch.zeros((B, S, self.config.d_hidden - self.config.d_embed), device=device)
-        x = torch.cat([icl_functional_update, scratch_space], dim=-1) # (B, S, D)
+        x = icl_functional_update
 
         if self.config.use_mlp:
             x = self.mlp(x)
 
         for transformer_block in self.transformer_blocks:
-            x = transformer_block(x) # (B, S, D)
+            x = transformer_block(x) # (B, S, E)
 
         x = x[:, :, :self.config.d_embed] # (B, S, E)
 
