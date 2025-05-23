@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .transformer_util import TransformerBlock, init_weights
-from transformer_util import MLP
+from .transformer_util import MLP
 from .icl_util import ICLBlock
 
 class ICLModel(nn.Module):
