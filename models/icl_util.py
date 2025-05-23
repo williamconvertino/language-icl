@@ -15,9 +15,6 @@ class ICLAttentionC(nn.Module):
         self.W_v = nn.Parameter(torch.zeros(config.n_heads, config.d_embed, config.d_hidden), requires_grad=True)
         self.W_o = nn.Parameter(torch.zeros(config.n_heads * config.d_embed, config.d_embed), requires_grad=True)
 
-        N_scaling = 1.0 / torch.arange(1, config.max_seq_len + 1).float() # (S)
-        self.register_buffer("N_scaling", N_scaling.view(1, config.max_seq_len, 1)) # (1, S, 1) 
-
         self.rotary_embeddings = RotaryPositionalEmbeddings(config.d_embed)
         
         self.drop_attn = nn.Dropout(0.1)
@@ -34,8 +31,8 @@ class ICLAttentionC(nn.Module):
         q = self.rotary_embeddings(q) # (B, H, S, E)
         k = self.rotary_embeddings(k) # (B, H, S, E)
 
-        causal_mask = torch.triu(torch.ones(S, S), diagonal=0).bool().to(q.device) # (S, S)
-        causal_mask[0, 0] = False # Ignore the first token (Fixes softmax)
+        causal_mask = torch.triu(torch.ones(S, S), diagonal=1).bool().to(q.device) # (S, S)
+        # causal_mask[0, 0] = False # Ignore the first token (Fixes softmax)
         
         attn_scores = torch.einsum('bhqd,bhkd->bhqk', q, k) # (B, H, S, S)
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, H, S, S)
