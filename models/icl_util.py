@@ -242,7 +242,8 @@ class ICLBlock(nn.Module):
         
         targets = targets # (B, S, E)
 
-        v = targets - self.calculate_embedding_expectation(functional_update) # (B, S, E)
+        # v = targets - self.calculate_embedding_expectation(functional_update) # (B, S, E)
+        v = targets
         q = k = covariates # (B, S, E)
 
         delta_f = self.attn(q, k, v) # (B, S, E)
