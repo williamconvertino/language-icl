@@ -1,0 +1,12 @@
+{
+    "model_type": "icl",
+    "d_embed": 512,
+    "max_seq_len": 128,
+    "n_heads": 8,
+    "n_feature_layers": 1,
+    "n_icl_layers": 1,
+    "extrapolation_mode": "attn",
+    "use_shift": false,
+    "freeze_icl_layers": true,
+    "random_features": false
+}

@@ -1,0 +1,8 @@
+{
+    "model_type": "transformer",
+    "d_embed": 512,
+    "max_seq_len": 128,
+    "n_heads": 8,
+    "n_layers": 1,
+    "random_features": false
+}

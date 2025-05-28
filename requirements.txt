@@ -1,0 +1,9 @@
+torch
+torchtune
+torchao
+tqdm
+datasets
+transformers
+tiktoken
+python-dotenv
+openai
