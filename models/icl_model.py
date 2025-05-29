@@ -12,7 +12,7 @@ class ICLModel(nn.Module):
         
         self.embedding = nn.Embedding(config.vocab_size, config.d_embed)
         
-        self.x_1 = nn.Parameter(torch.randn(1, 1, 10)) # (B, S, E)
+        self.x_1 = nn.Parameter(torch.randn(1, 1, config.d_embed)) # (B, S, E)
         
         self.feature_blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_feature_blocks)])
         self.icl_blocks = nn.ModuleList([ICLBlock(config, self.embedding) for _ in range(config.n_icl_blocks)])
