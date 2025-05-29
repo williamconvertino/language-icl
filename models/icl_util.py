@@ -62,7 +62,7 @@ class ICLBlock(nn.Module):
         self.config = config
         self.embedding = embedding
         
-        self.attn = ICLAttention
+        self.attn = ICLAttention(config)
         
         if hasattr(self.config, "use_mlp_expectation") and self.config.use_mlp_expectation:
             self.mlp_expectation = MLP(config)
