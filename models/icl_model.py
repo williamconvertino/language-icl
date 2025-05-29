@@ -72,7 +72,7 @@ class ICLModel(nn.Module):
 
             x = icl_functional_update[:, :-1, :] # (B, S, E)
         
-        for block in self.config.extrapolation_blocks:
+        for block in self.extrapolation_blocks:
             x = block(x)
 
         x = self.ln_out(x)

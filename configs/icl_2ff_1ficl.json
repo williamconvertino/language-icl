@@ -3,10 +3,10 @@
     "d_embed": 512,
     "max_seq_len": 128,
     "n_heads": 8,
-    "n_feature_blocks": 1,
+    "n_feature_blocks": 2,
     "freeze_feature_blocks": true,
     "n_icl_blocks": 1,
-    "freeze_icl_blocks": false,
+    "freeze_icl_blocks": true,
     "n_extrapolation_blocks": 0,
     "freeze_extrapolation_blocks": false,
     "use_identity_a0": false
