@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from .transformer_util import TransformerBlock, MLP, init_weights
 from .icl_util import ICLBlock
 
-class Transformer(nn.Module):
+class TransformerModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         
