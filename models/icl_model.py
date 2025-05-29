@@ -48,8 +48,7 @@ class ICLModel(nn.Module):
         device = embeddings.device
         
         x_1 = self.x_1.expand(B, -1, -1) # (B, 1, E)
-        print(embeddings.shape)
-        print(x_1.shape)
+
         icl_covariates = torch.cat([x_1, embeddings], dim=1) # (B, S+1, E)
         
         for block in self.feature_blocks:
