@@ -12,24 +12,27 @@ class ICLModel(nn.Module):
         
         self.embedding = nn.Embedding(config.vocab_size, config.d_embed)
         
-        self.feature_blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_feature_layers)])
-        self.icl_blocks = nn.ModuleList([ICLBlock(config, self.embedding) for _ in range(config.n_icl_layers)])
+        self.x_1 = nn.Parameter(torch.randn(1, 1, 10)) # (B, S, E)
+        
+        self.feature_blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_feature_blocks)])
+        self.icl_blocks = nn.ModuleList([ICLBlock(config, self.embedding) for _ in range(config.n_icl_blocks)])
+        self.extrapolation_blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_extrapolation_blocks)])
 
-        if config.random_features:
+        if config.freeze_feature_blocks:
             for block in self.feature_blocks:
                 for param in block.parameters():
                     param.requires_grad = False
                     
-        if config.freeze_icl_layers:
+        if config.freeze_icl_blocks:
             for block in self.icl_blocks:
                 for param in block.parameters():
                     param.requires_grad = False
-
-        if config.extrapolation_mode == "attn":
-            self.extrapolation_block = TransformerBlock(config)
-        elif config.extrapolation_mode == "mlp":
-            self.extrapolation_block = MLP(config)
-
+        
+        if config.freeze_extrapolation_blocks:
+            for block in self.feature_blocks:
+                for param in block.parameters():
+                    param.requires_grad = False
+                    
         self.ln_out = nn.LayerNorm(config.d_embed)
         self.lm_head = nn.Linear(config.d_embed, config.vocab_size, bias=False)
         
@@ -41,27 +44,35 @@ class ICLModel(nn.Module):
         
         embeddings = self.embedding(x) # (B, S, E)
         
+        x_1 = self.x_1.expand(B, -1, -1) # (B, 1, E)
+        
+        icl_covariates = torch.cat([x_1, embeddings], dim=1) # (B, S+1, E)
+        
         B, S, E = embeddings.shape
-        device = x.device
-        
-        icl_covariates = embeddings
-        icl_targets = embeddings
-        icl_functional_update = torch.zeros_like(embeddings, device=device)
-        
-        if self.config.use_shift:
-            icl_targets = icl_targets[:, 1:, :] # (B, S-1, E)
-            icl_targets = torch.cat([icl_targets, torch.zeros(B, 1, E, device=device)], dim=1) # (B, S, E)
+        device = embeddings.device
         
         for block in self.feature_blocks:
-            icl_covariates = block(icl_covariates) # Update feature representations
-
-        for block in self.icl_blocks:
-            icl_covariates, icl_targets, icl_functional_update = block(icl_covariates, icl_targets, icl_functional_update)
-
-        x = icl_functional_update
+            icl_covariates = block(icl_covariates) # (B, S+1, E)
         
-        if self.config.extrapolation_mode == "attn" or self.config.extrapolation_mode == "mlp":
-            x = self.extrapolation_block(x)
+        if self.config.n_icl_blocks == 0:
+            x = icl_covariates[:, 1:, :] # (B, S, E)
+        else:
+            y_NP1 = torch.zeros(B, 1, E, device=device) # (B, 1, E)
+            
+            icl_targets = torch.cat([embeddings, y_NP1], dim=1) # (B, S+1, E)
+            
+            if self.config.use_identity_a0:
+                icl_functional_update = icl_covariates.clone() # (B, S+1, E) Can reuse update as our initial prediction
+            else:
+                icl_functional_update = torch.zeros(B, S+1, E, device=device) # (B, S+1, E)
+            
+            for block in self.icl_blocks:
+                icl_covariates, icl_targets, icl_functional_update = block(icl_covariates, icl_targets, icl_functional_update)
+
+            x = icl_functional_update[:, :-1, :] # (B, S, E)
+        
+        for block in self.config.extrapolation_blocks:
+            x = block(x)
 
         x = self.ln_out(x)
         

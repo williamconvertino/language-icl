@@ -1,0 +1,12 @@
+{
+    "model_type": "icl",
+    "d_embed": 512,
+    "max_seq_len": 128,
+    "n_heads": 8,
+    "n_feature_blocks": 1,
+    "freeze_feature_blocks": false,
+    "n_icl_blocks": 0,
+    "freeze_icl_blocks": false,
+    "n_extrapolation_blocks": 0,
+    "freeze_extrapolation_blocks": false
+}

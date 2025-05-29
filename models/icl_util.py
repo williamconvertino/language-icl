@@ -3,27 +3,18 @@ import math
 import torch.nn as nn
 import torch.nn.functional as F
 from torchtune.modules import RotaryPositionalEmbeddings
-from .transformer_util import Attention
+from .transformer_util import MLP
 
-class VShiftAttention(nn.Module):
-    def __init__(self, config, d_q=None, d_k=None, d_v=None, d_out=None):
+class ICLAttention(nn.Module):
+    def __init__(self, config):
         super().__init__()
-        
-        if d_q is None:
-            d_q = config.d_embed
-        if d_k is None:
-            d_k = config.d_embed
-        if d_v is None:
-            d_v = config.d_embed
-        if d_out is None:
-            d_out = config.d_embed
         
         self.config = config
         
-        self.W_q = nn.Linear(d_q, config.n_heads * config.d_embed, bias=False)
-        self.W_k = nn.Linear(d_k, config.n_heads * config.d_embed, bias=False)
-        self.W_v = nn.Linear(d_v, config.n_heads * config.d_embed, bias=False)
-        self.W_o = nn.Linear(config.n_heads * config.d_embed, d_out, bias=False)
+        self.W_q = nn.Linear(config.d_embed, config.n_heads * config.d_embed, bias=False)
+        self.W_k = nn.Linear(config.d_embed, config.n_heads * config.d_embed, bias=False)
+        self.W_v = nn.Linear(config.d_embed, config.n_heads * config.d_embed, bias=False)
+        self.W_o = nn.Linear(config.n_heads * config.d_embed, config.d_embed, bias=False)
         
         self.attn_scale = 1 / math.sqrt(config.d_embed)
         
@@ -39,25 +30,22 @@ class VShiftAttention(nn.Module):
         if v is None:
             v = q
         
-        B, S, E = q.shape
-        device = q.device
+        B, S, E = q.shape # Note that S here really represents S+1, as we add an additional global context token
         
-        q = self.W_q(q).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2) # (B, H, S, E)
-        k = self.W_k(k).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2) # (B, H, S, E)
-        v = self.W_v(v).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2) # (B, H, S, E)
+        q = self.W_q(q).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
+        k = self.W_k(k).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
+        v = self.W_v(v).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
         
         q = self.rotary_embeddings(q)
         k = self.rotary_embeddings(k)
         
-        causal_mask = torch.triu(torch.ones(S, S), diagonal=1).bool().to(device) # (S, S)
+        causal_mask = torch.triu(torch.ones(S, S), diagonal=0).bool().to(q.device) # (S, S)
+        causal_mask[0, 0] = False # (First self attention is purely global, so no harm in keeping it) (prevents softmax issues)
         
-        attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.attn_scale # (B, H, S, S)
-        attn_scores = attn_scores.masked_fill(causal_mask, float('-inf'))
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.attn_scale
+        attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, S, S)
         
-        attn_probs = F.softmax(attn_scores, dim=-1) # (B, H, S, S)
-        
-        diag_mask = torch.eye(S, dtype=torch.bool, device=device)
-        attn_probs = attn_probs.masked_fill(diag_mask, 0) # Remove attention between a position and itself (but dont change softmax calculation)
+        attn_probs = F.softmax(attn_scores, dim=-1)
         attn_probs = self.drop_attn(attn_probs)
         
         attn_output = torch.matmul(attn_probs, v)
@@ -74,26 +62,28 @@ class ICLBlock(nn.Module):
         self.config = config
         self.embedding = embedding
         
-        if config.use_shift:
-            self.attn = VShiftAttention(config)
-        else:
-            self.attn = Attention(config)
+        self.attn = ICLAttention
+        
+        if hasattr(self.config, "use_mlp_expectation") and self.config.use_mlp_expectation:
+            self.mlp_expectation = MLP(config)
         
     def calculate_embedding_expectation(self, functional_update): 
         with torch.no_grad():
             embedding_matrix = self.embedding.weight # (V, E)
-            weighted_expectation = F.softmax(functional_update @ embedding_matrix.transpose(0, 1), dim=-1) @ embedding_matrix # (B, S, E)
+            weighted_expectation = F.softmax(functional_update @ embedding_matrix.transpose(0, 1), dim=-1) @ embedding_matrix # (B, S + 1, E)
             return weighted_expectation.detach()
             
     def forward(self, covariates, targets, functional_update):
         
-        targets = targets # (B, S, E)
+        if hasattr(self.config, "use_mlp_expectation") and self.config.use_mlp_expectation:
+            v = targets + self.mlp_expectation(functional_update)
+        else:
+            v = targets - self.calculate_embedding_expectation(functional_update) # (B, S + 1, E)
+            
+        q = k = covariates # (B, S + 1, E)
 
-        v = targets - self.calculate_embedding_expectation(functional_update) # (B, S, E)
-        q = k = covariates # (B, S, E)
+        delta_f = self.attn(q, k, v) # (B, S + 1, E)
 
-        delta_f = self.attn(q, k, v) # (B, S, E)
-
-        functional_update = functional_update + delta_f # (B, S, E)
+        functional_update = functional_update + delta_f # (B, S + 1, E)
 
         return covariates, targets, functional_update
