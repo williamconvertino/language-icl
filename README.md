@@ -38,3 +38,4 @@ python survey.py
 
 TEST 1 - Remove diagonal masking
 Test 2 - Remove diagonal + [:, :-1, :]
+Test 3 - No rotary

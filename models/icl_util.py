@@ -36,11 +36,12 @@ class ICLAttention(nn.Module):
         k = self.W_k(k).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
         v = self.W_v(v).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
         
-        q = self.rotary_embeddings(q)
-        k = self.rotary_embeddings(k)
+        if not (hasattr(self.config, "remove_icl_rotary") and self.config.remove_icl_rotary):
+            q = self.rotary_embeddings(q)
+            k = self.rotary_embeddings(k)
         
-        causal_mask = torch.triu(torch.ones(S, S), diagonal=1).bool().to(q.device) # (S, S)
-        # causal_mask[0, 0] = False # (First self attention is purely global, so no harm in keeping it) (prevents softmax issues)
+        causal_mask = torch.triu(torch.ones(S, S), diagonal=0).bool().to(q.device) # (S, S)
+        causal_mask[0, 0] = False # (First self attention is purely global, so no harm in keeping it) (prevents softmax issues)
         
         attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.attn_scale
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, S, S)
