@@ -35,3 +35,6 @@ To quickly see what models have been trained (and for how many epochs), simply u
 ```
 python survey.py
 ```
+
+TEST 1 - Remove diagonal masking
+Test 2 - Remove diagonal + [:, :-1, :]
