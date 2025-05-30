@@ -69,7 +69,7 @@ class ICLModel(nn.Module):
             for block in self.icl_blocks:
                 icl_covariates, icl_targets, icl_functional_update = block(icl_covariates, icl_targets, icl_functional_update)
 
-            x = icl_functional_update[:, :-1, :] # (B, S, E)
+            x = icl_functional_update[:, 1:, :] # (B, S, E)
         
         for block in self.extrapolation_blocks:
             x = block(x)
