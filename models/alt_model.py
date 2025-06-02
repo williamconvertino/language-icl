@@ -14,7 +14,7 @@ class AltModel(nn.Module):
         
         self.x_1 = nn.Parameter(torch.randn(1, 1, config.d_embed // 2)) # (B, S, E)
         
-        self.blocks = nn.ModuleList([TransformerBlock(config) for _ in config.n_layers])
+        self.blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_layers)])
         
         self.ln_out = nn.LayerNorm(config.d_embed // 2)
         self.lm_head = nn.Linear(config.d_embed // 2, config.vocab_size, bias=False)
