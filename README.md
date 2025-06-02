@@ -18,7 +18,6 @@ To load a specific checkpoint, use:
 python main.py --eval [config name] --checkpoint [checkpoint name]
 ```
 
-
 where [checkpoint name] is either "epoch_x" or "best"
 
 ### Generation
@@ -26,6 +25,7 @@ where [checkpoint name] is either "epoch_x" or "best"
 ```
 python main.py --eval [config name] --generate
 ```
+
 Note that this uses nucleus (top-p) sampling
 
 ### Survey
@@ -35,3 +35,9 @@ To quickly see what models have been trained (and for how many epochs), simply u
 ```
 python survey.py
 ```
+
+#### EXPERIMENTS
+
+Test - replace x = functional output [:, :-1, :] with [:, 1:, :]
+
+Test 2
