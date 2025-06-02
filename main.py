@@ -7,6 +7,7 @@ from util.llm_eval import LLMEvaluator
 from dataset.tokenizer import Tokenizer
 from dataset.tinystories_dataset import TinyStoriesDataset
 from models.transformer_model import TransformerModel
+from models.alt_model import AltModel
 from models.icl_model import ICLModel
 from util.loading import load_checkpoint, load_config
 
@@ -60,6 +61,8 @@ def main():
         model = TransformerModel(config)
     elif config.model_type == "icl":
         model = ICLModel(config)
+    elif config.model_type == "alt":
+        model = AltModel(config)
     else:
         raise ValueError(f"Unknown model type: {config.model_type}")
     
