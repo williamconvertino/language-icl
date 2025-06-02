@@ -41,7 +41,7 @@ class AltModel(nn.Module):
         for block in self.blocks:
             x = block(x)
 
-        x = x[:, :, self.config.d_embed // 2:]
+        x = x[:, 1:, self.config.d_embed // 2:]
 
         x = self.ln_out(x)
         
