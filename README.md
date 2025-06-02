@@ -36,8 +36,6 @@ To quickly see what models have been trained (and for how many epochs), simply u
 python survey.py
 ```
 
-#### EXPERIMENTS
-
-Test - replace x = functional output [:, :-1, :] with [:, 1:, :]
-
-Test 2
+TEST 1 - Remove diagonal masking
+Test 2 - Remove diagonal + [:, :-1, :]
+Test 3 - No rotary
