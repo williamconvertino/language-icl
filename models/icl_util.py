@@ -34,7 +34,11 @@ class ICLAttention(nn.Module):
         
         q = self.W_q(q).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
         k = self.W_k(k).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
-        v = self.W_v(v).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
+        
+        if hasattr(self.config, "use_wv") and not self.config.use_wv:
+            v = v.view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
+        else:
+            v = self.W_v(v).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
         
         if not (hasattr(self.config, "remove_icl_rotary") and self.config.remove_icl_rotary):
             q = self.rotary_embeddings(q)

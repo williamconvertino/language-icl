@@ -15,7 +15,13 @@ class ICLModel(nn.Module):
         self.x_1 = nn.Parameter(torch.randn(1, 1, config.d_embed)) # (B, S, E)
         
         self.feature_blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_feature_blocks)])
-        self.icl_blocks = nn.ModuleList([ICLBlock(config, self.embedding) for _ in range(config.n_icl_blocks)])
+        
+        if hasattr(config, "share_params") and config.share_params:
+            icl_block = ICLBlock(config, self.embedding)
+            self.icl_blocks = nn.ModuleList([icl_block for _ in range(config.n_icl_blocks)])
+        else:
+            self.icl_blocks = nn.ModuleList([ICLBlock(config, self.embedding) for _ in range(config.n_icl_blocks)])
+        
         self.extrapolation_blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_extrapolation_blocks)])
 
         if config.freeze_feature_blocks:
