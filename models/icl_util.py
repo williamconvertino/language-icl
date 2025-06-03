@@ -36,7 +36,7 @@ class ICLAttention(nn.Module):
         k = self.W_k(k).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
         
         if hasattr(self.config, "use_wv") and not self.config.use_wv:
-            v = v.view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
+            v = v.unsqueeze(2).expand(B, S, self.config.n_heads, E).transpose(1, 2)
         else:
             v = self.W_v(v).view(B, S, self.config.n_heads, self.config.d_embed).transpose(1, 2)
         
