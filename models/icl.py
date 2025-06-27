@@ -29,6 +29,9 @@ class ICLModel(nn.Module):
         
         embeddings = self.embedding(x) # (B, S, E)
         
+        B, S, E = embeddings.shape
+        device = embeddings.device
+        
         x_1 = self.x_1.expand(B, -1, -1) # (B, 1, E)
         
         icl_covariates = torch.cat([x_1, embeddings], dim=1) # (B, S+1, E)
@@ -37,8 +40,6 @@ class ICLModel(nn.Module):
         icl_targets = torch.cat([embeddings, y_NP1], dim=1) # (B, S+1, E)
         icl_functional_update = torch.zeros(B, S+1, E, device=device) # (B, S+1, E)
             
-        B, S, E = embeddings.shape
-        device = embeddings.device
         
         for block, sym in zip(self.blocks, self.config.block_list):
             
