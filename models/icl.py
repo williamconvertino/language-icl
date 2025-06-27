@@ -12,7 +12,7 @@ class ICLModel(nn.Module):
         
         self.embedding = nn.Embedding(config.vocab_size, config.d_embed)
         
-        self.x_1 = nn.Parameter(torch.randn(1, 1, 10)) # (B, S, E)
+        self.x_1 = nn.Parameter(torch.randn(1, 1, config.d_embed))
         
         config.block_list = ['t', 'i'] * (config.n_blocks // 2) 
         
