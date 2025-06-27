@@ -16,6 +16,6 @@
 
 set -e
 source ~/.bashrc
-conda activate icl
+conda activate language-icl
 
 python ./main.py "$@"
