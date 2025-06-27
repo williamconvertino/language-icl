@@ -46,7 +46,6 @@ class ICLAttention(nn.Module):
         
         causal_mask = torch.triu(torch.ones(S, S), diagonal=0).bool().to(q.device) # (S, S)
         causal_mask[0, 0] = False # (First self attention is purely global, so no harm in keeping it) (prevents softmax issues)
-        # causal_mask = torch.triu(torch.ones(S, S), diagonal=1).bool().to(q.device) # (S, S)
         
         attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.attn_scale
         attn_scores = attn_scores.masked_fill(causal_mask, float('-inf')) # (B, S, S)
@@ -62,30 +61,17 @@ class ICLAttention(nn.Module):
         return attn_output
 
 class ICLBlock(nn.Module):
-    def __init__(self, config, embedding):
+    def __init__(self, config):
         super().__init__()
         
         self.config = config
-        self.embedding = embedding
+
+        self.attn = ICLAttention(config)        
+        self.mlp_expectation = MLP(config)
         
-        self.attn = ICLAttention(config)
-        
-        if hasattr(self.config, "use_mlp_expectation") and self.config.use_mlp_expectation:
-            self.mlp_expectation = MLP(config)
-        
-    def calculate_embedding_expectation(self, functional_update): 
-        with torch.no_grad():
-            embedding_matrix = self.embedding.weight # (V, E)
-            weighted_expectation = F.softmax(functional_update @ embedding_matrix.transpose(0, 1), dim=-1) @ embedding_matrix # (B, S + 1, E)
-            return weighted_expectation.detach()
-            
     def forward(self, covariates, targets, functional_update):
         
-        if hasattr(self.config, "use_mlp_expectation") and self.config.use_mlp_expectation:
-            v = targets + self.mlp_expectation(functional_update)
-        else:
-            v = targets - self.calculate_embedding_expectation(functional_update) # (B, S + 1, E)
-            
+        v = targets + self.mlp_expectation(functional_update)    
         q = k = covariates # (B, S + 1, E)
 
         delta_f = self.attn(q, k, v) # (B, S + 1, E)
